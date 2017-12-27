@@ -1,0 +1,690 @@
+# -------------------------- ./src/action/ChessMove.java -------------------------- #
+package action;
+
+import java.util.*;
+
+/**
+ * @author kamontat
+ * @version 1.0
+ * @since Tue 12/Dec/2017 - 13:15
+ */
+public class ChessMove implements Move {
+    private Scanner s = new Scanner(System.in);
+    
+    private int character; // the chess character
+    private int placeX; // location place to
+    private int placeY; // location place to
+    
+    private Date date;
+    
+    @Override
+    public void move() {
+        System.out.print("Input character code: ");
+        character = s.nextInt();
+        System.out.print("Input result location (X Y): ");
+        placeX = s.nextInt() - 1;
+        placeY = s.nextInt() - 1;
+        date = new Date();
+    }
+    
+    public int getCharacter() {
+        return character;
+    }
+    
+    public int getPlaceX() {
+        return placeX;
+    }
+    
+    public int getPlaceY() {
+        return placeY;
+    }
+    
+    @Override
+    public void show() {
+        System.out.printf("Moving.. CHESS %d to (%d,%d) @ %s\n", character, placeX, placeY, dateFormat.format(date));
+    }
+}
+# -------------------------- ./src/action/Move.java -------------------------- #
+package action;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+
+/**
+ * @author kamontat
+ * @version 1.0
+ * @since Tue 12/Dec/2017 - 13:14
+ */
+public interface Move {
+    DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+    
+    void move();
+    
+    void show();
+}
+# -------------------------- ./src/action/TicTacToeMove.java -------------------------- #
+package action;
+
+import java.util.*;
+
+/**
+ * @author kamontat
+ * @version 1.0
+ * @since Tue 12/Dec/2017 - 13:15
+ */
+public class TicTacToeMove implements Move {
+    private Scanner s = new Scanner(System.in);
+    
+    private int placeX; // location place to
+    private int placeY; // location place to
+    
+    private Date date;
+    
+    @Override
+    public void move() {
+        System.out.print("Input location (X Y): ");
+        placeX = s.nextInt() - 1;
+        placeY = s.nextInt() - 1;
+        date = new Date();
+        // System.out.printf("Adding.. TICTACTOE at (%d,%d) @ %s\n", placeX, placeY, dateFormat.format(date));
+    }
+    
+    @Override
+    public void show() {
+        System.out.printf("Adding.. TICTACTOE at (%d,%d) @ %s\n", placeX, placeY, dateFormat.format(date));
+    }
+    
+    public int getPlaceX() {
+        return placeX;
+    }
+    
+    public int getPlaceY() {
+        return placeY;
+    }
+}
+# -------------------------- ./src/controller/Match.java -------------------------- #
+package controller;
+
+import action.Move;
+import logic.Logic;
+import object.Player;
+import view.GameBoard;
+
+/**
+ * @author kamontat
+ * @version 1.0
+ * @since Tue 12/Dec/2017 - 13:15
+ */
+public class Match {
+    ReplayedMatch match;
+    private GameBoard.SupportGame game;
+    
+    private Logic logic;
+    
+    public Match(GameBoard.SupportGame gameType, int row, int col, Player... args) {
+        match = new ReplayedMatch();
+        
+        this.game = gameType;
+        
+        logic = this.game.getLogic();
+        logic.setBoard(row, col);
+        logic.addPlayer(args);
+        logic.renderBoard();
+    }
+    
+    /**
+     * play game xx turn
+     */
+    public void play() {
+        while (!logic.isFinish()) {
+            System.out.println("current player: " + logic.getCurrentPlayer());
+            Move m = game.getMove();
+            match.addMove(m);
+            logic.insert(m);
+            logic.renderBoard();
+        }
+    }
+    
+    /**
+     * return match repeatable
+     */
+    public ReplayedMatch replay() {
+        return match.fork();
+    }
+}
+# -------------------------- ./src/controller/ReplayedMatch.java -------------------------- #
+package controller;
+
+import action.Move;
+
+import java.util.*;
+
+/**
+ * @author kamontat
+ * @version 1.0
+ * @since Tue 12/Dec/2017 - 13:16
+ */
+public class ReplayedMatch {
+    private int pointer;
+    
+    private ArrayList<Move> moveHistory;
+    
+    public ReplayedMatch() {
+        moveHistory = new ArrayList<>();
+        resetMove();
+    }
+    
+    private ReplayedMatch(ArrayList<Move> moveHistory) {
+        this.moveHistory = new ArrayList<>(moveHistory);
+        resetMove();
+    }
+    
+    /**
+     * copy all history to other object
+     *
+     * @return this replay match, with new object
+     */
+    public ReplayedMatch fork() {
+        return new ReplayedMatch(this.moveHistory);
+    }
+    
+    /**
+     * reset current move to start
+     *
+     * @return move
+     */
+    public void resetMove() {
+        pointer = 0;
+    }
+    
+    /**
+     * get next move
+     *
+     * @return move
+     */
+    public Move nextMove() {
+        pointer++;
+        if (pointer >= moveHistory.size()) return null;
+        return getCurrentMove();
+    }
+    
+    /**
+     * get previous move
+     *
+     * @return move
+     */
+    public Move PreviousMove() {
+        pointer--;
+        if (pointer < 0) return null;
+        return getCurrentMove();
+    }
+    
+    /**
+     * recursive all move from start
+     */
+    public void startReplay() {
+        resetMove();
+        Move m;
+        
+        getCurrentMove().show();
+        while ((m = nextMove()) != null) {
+            m.show();
+        }
+    }
+    
+    /**
+     * for match, add new move
+     *
+     * @param move
+     */
+    protected void addMove(Move move) {
+        moveHistory.add(move);
+        pointer++;
+    }
+    
+    /**
+     * get current move
+     *
+     * @return move
+     */
+    private Move getCurrentMove() {
+        return moveHistory.get(pointer);
+    }
+}
+# -------------------------- ./src/logic/ChessLogic.java -------------------------- #
+package logic;
+
+import action.ChessMove;
+import action.Move;
+import object.Player;
+
+/**
+ * @author kamontat
+ * @version 1.0
+ * @since Tue 12/Dec/2017 - 14:35
+ */
+public class ChessLogic implements Logic {
+    private int[][] board;
+    
+    private int pointer;
+    private Player[] players;
+    
+    private int numberOfPlayer;
+    private Player currentPlayer;
+    
+    public ChessLogic() {
+        setBoard(20, 20);
+    }
+    
+    public ChessLogic(int row, int col, Player... args) {
+        setBoard(row, col);
+        addPlayer(args);
+    }
+    
+    @Override
+    public void setBoard(int row, int col) {
+        this.board = new int[row][col];
+    }
+    
+    @Override
+    public void addPlayer(Player... args) {
+        this.players = args;
+        this.numberOfPlayer = players.length;
+        this.pointer = 0;
+    }
+    
+    @Override
+    public <T extends Move> void insert(T move) {
+        if (!(move instanceof ChessMove)) return;
+        
+        move.move();
+        
+        int c = ((ChessMove) move).getCharacter();
+        int x = ((ChessMove) move).getPlaceX();
+        int y = ((ChessMove) move).getPlaceY();
+        if (x >= board.length) {
+            System.out.println("OUT OF LENGTH X");
+            return;
+        }
+        if (y >= board[0].length) {
+            System.out.println("OUT OF LENGTH Y");
+            return;
+        }
+        if (board[x][y] != 0) {
+            System.out.println("CANNOT INSERT");
+            return;
+        }
+        
+        
+        board[x][y] = players[pointer].getId() + c;
+        nextPointer();
+    }
+    
+    public void renderBoard() {
+        System.out.printf("%4s |", " ");
+        for (int j = 0; j < board[0].length; j++) {
+            System.out.printf("%4s |", j + 1);
+        }
+        System.out.println();
+        for (int i = 0; i < board.length; i++) {
+            System.out.printf("%4s |", i + 1);
+            for (int j = 0; j < board[0].length; j++) {
+                System.out.printf("%4s |", board[i][j]);
+            }
+            System.out.println();
+        }
+    }
+    
+    @Override
+    public Player getCurrentPlayer() {
+        return players[pointer];
+    }
+    
+    @Override
+    public boolean isFinish() {
+        for (int i = 0; i < board.length; i++) {
+            for (int j = 0; j < board[0].length; j++) {
+                if (board[i][j] == 0) return false;
+            }
+        }
+        return true;
+    }
+    
+    private void nextPointer() {
+        pointer++;
+        if (pointer >= numberOfPlayer) pointer = 0;
+    }
+}
+# -------------------------- ./src/logic/Logic.java -------------------------- #
+package logic;
+
+import action.Move;
+import object.Player;
+
+/**
+ * @author kamontat
+ * @version 1.0
+ * @since Tue 12/Dec/2017 - 14:44
+ */
+public interface Logic {
+    void setBoard(int row, int col);
+    
+    void addPlayer(Player... args);
+    
+    <T extends Move> void insert(T move);
+    
+    void renderBoard();
+    
+    Player getCurrentPlayer();
+    
+    boolean isFinish();
+}
+# -------------------------- ./src/logic/TicTacToeLogic.java -------------------------- #
+package logic;
+
+import action.Move;
+import action.TicTacToeMove;
+import object.Player;
+
+/**
+ * @author kamontat
+ * @version 1.0
+ * @since Tue 12/Dec/2017 - 14:35
+ */
+public class TicTacToeLogic implements Logic {
+    private int[][] board;
+    
+    private int pointer;
+    private Player[] players;
+    
+    private int numberOfPlayer;
+    private Player currentPlayer;
+    
+    public TicTacToeLogic() {
+        setBoard(3, 3);
+    }
+    
+    public TicTacToeLogic(int row, int col, Player... args) {
+        setBoard(row, col);
+        addPlayer(args);
+    }
+    
+    @Override
+    public void setBoard(int row, int col) {
+        this.board = new int[row][col];
+    }
+    
+    @Override
+    public void addPlayer(Player... args) {
+        this.players = args;
+        this.numberOfPlayer = players.length;
+        this.pointer = 0;
+    }
+    
+    @Override
+    public <T extends Move> void insert(T move) {
+        if (!(move instanceof TicTacToeMove)) return;
+        
+        move.move();
+        
+        int x = ((TicTacToeMove) move).getPlaceX();
+        int y = ((TicTacToeMove) move).getPlaceY();
+        if (x >= board.length) {
+            System.out.println("OUT OF LENGTH X");
+            return;
+        }
+        if (y >= board[0].length) {
+            System.out.println("OUT OF LENGTH Y");
+            return;
+        }
+        if (board[x][y] != 0) {
+            System.out.println("CANNOT INSERT");
+            return;
+        }
+        
+        board[x][y] = players[pointer].getId();
+        nextPointer();
+    }
+    
+    public void renderBoard() {
+        System.out.printf("%s |", " ");
+        for (int j = 0; j < board[0].length; j++) {
+            System.out.printf("%d |", j + 1);
+        }
+        System.out.println();
+        for (int i = 0; i < board.length; i++) {
+            System.out.printf("%d |", i + 1);
+            for (int j = 0; j < board[0].length; j++) {
+                System.out.printf("%d |", board[i][j]);
+            }
+            System.out.println();
+        }
+    }
+    
+    @Override
+    public Player getCurrentPlayer() {
+        return players[pointer];
+    }
+    
+    @Override
+    public boolean isFinish() {
+        for (int i = 0; i < board.length; i++) {
+            for (int j = 0; j < board[0].length; j++) {
+                if (board[i][j] == 0) return false;
+            }
+        }
+        return true;
+    }
+    
+    private void nextPointer() {
+        pointer++;
+        if (pointer >= numberOfPlayer) pointer = 0;
+    }
+}
+# -------------------------- ./src/main/Main.java -------------------------- #
+package main;
+
+import controller.ReplayedMatch;
+import object.Player;
+import view.GameBoard;
+import view.GameHistory;
+
+public class Main {
+    
+    public static void main(String[] args) {
+        Player player1 = new Player("Player 1");
+        Player player2 = new Player("Player 2");
+        
+        startGame(GameBoard.SupportGame.TIC_TAC_TOE, 3, 3, player1, player2);
+        
+        replayGame(0);
+    }
+    
+    public static void startGame(GameBoard.SupportGame game, int row, int col, Player... args) {
+        System.out.println("NEW " + game + " GAME ");
+        
+        // create new chess board game
+        GameBoard board = new GameBoard(game, row, col, args);
+        
+        // start game
+        board.startGame();
+    }
+    
+    public static void replayGame(int id) {
+        System.out.println("Replay game id=" + id);
+        
+        GameBoard b = GameHistory.getInstance().getGameID(id);
+        
+        ReplayedMatch replayMatch2 = b.replayGame();
+        replayMatch2.startReplay();
+    }
+}
+# -------------------------- ./src/object/Player.java -------------------------- #
+package object;
+
+import java.util.*;
+
+/**
+ * @author kamontat
+ * @version 1.0
+ * @since Tue 12/Dec/2017 - 14:37
+ */
+public class Player {
+    private static int ID = 1;
+    private int id;
+    private String name;
+    
+    public Player(String name) {
+        this.name = name;
+        this.id = Player.ID;
+        Player.ID++;
+        
+        Players.getInstant().addPlayer(this);
+    }
+    
+    public int getId() {
+        return id;
+    }
+    
+    public String getName() {
+        return name;
+    }
+    
+    @Override
+    public String toString() {
+        return "id=" + id + ", name='" + name;
+    }
+}
+
+class Players {
+    private static Players instant;
+    
+    public static Players getInstant() {
+        if (instant == null) instant = new Players();
+        return instant;
+    }
+    
+    private Players() {
+        players = new HashMap<>();
+    }
+    
+    private HashMap<Integer, Player> players;
+    
+    protected void addPlayer(Player... args) {
+        for (Player p : args) {
+            players.put(p.getId(), p);
+        }
+    }
+    
+    protected Player getPlayer(int id) {
+        return players.get(id);
+    }
+}
+# -------------------------- ./src/view/GameBoard.java -------------------------- #
+package view;
+
+import action.ChessMove;
+import action.Move;
+import action.TicTacToeMove;
+import controller.Match;
+import controller.ReplayedMatch;
+import logic.ChessLogic;
+import logic.Logic;
+import logic.TicTacToeLogic;
+import object.Player;
+
+/**
+ * @author kamontat
+ * @version 1.0
+ * @since Tue 12/Dec/2017 - 13:14
+ */
+public class GameBoard {
+    private static int id = 0;
+    private Match match;
+    private SupportGame gameType;
+    
+    /**
+     * support game
+     */
+    public enum SupportGame {
+        TIC_TAC_TOE(TicTacToeMove.class, TicTacToeLogic.class),
+        CHESS(ChessMove.class, ChessLogic.class);
+        
+        private Class<? extends Move> move;
+        
+        private Logic logic;
+        private Class<? extends Logic> logicClass;
+        
+        SupportGame(Class<? extends Move> move, Class<? extends Logic> logicClass) {
+            this.move = move;
+            this.logicClass = logicClass;
+        }
+        
+        public Move getMove() {
+            try {
+                return move.newInstance();
+            } catch (InstantiationException | IllegalAccessException e) {
+                e.printStackTrace();
+                return new TicTacToeMove();
+            }
+        }
+        
+        public Logic getLogic() {
+            if (logic == null) {
+                try {
+                    logic = logicClass.newInstance();
+                } catch (InstantiationException | IllegalAccessException e) {
+                    e.printStackTrace();
+                    logic = new TicTacToeLogic(3, 3, new Player("name1"), new Player("name2"));
+                }
+            }
+            return logic;
+        }
+    }
+    
+    /**
+     * create board with game type
+     *
+     * @param gameType
+     *         game type
+     */
+    public GameBoard(SupportGame gameType, int row, int col, Player... args) {
+        match = new Match(gameType, row, col, args);
+        // save history
+        GameHistory.getInstance().put(id++, this);
+    }
+    
+    /**
+     * mock game turn
+     */
+    public void startGame() {
+        match.play();
+    }
+    
+    public ReplayedMatch replayGame() {
+        return match.replay();
+    }
+}
+# -------------------------- ./src/view/GameHistory.java -------------------------- #
+package view;
+
+import java.util.*;
+
+/**
+ * @author kamontat
+ * @version 1.0
+ * @since Tue 12/Dec/2017 - 13:25
+ */
+public class GameHistory extends HashMap<Integer, GameBoard> {
+    private static GameHistory instance;
+    
+    public static GameHistory getInstance() {
+        if (instance == null) instance = new GameHistory();
+        return instance;
+    }
+    
+    // return @nullable
+    public GameBoard getGameID(int id) {
+        return GameHistory.getInstance().get(id);
+    }
+}
